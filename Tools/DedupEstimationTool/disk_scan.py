@@ -58,21 +58,21 @@ def process_partial_disk(handle, iters, chunksize, hash_function, m, x, threads,
     """
     try:
         logging.debug(f"Thread {threading.current_thread().name} started processing with size {size_per_thread}")
-        logging.debug(f"fastcdc.fastcdc initializing now with chunksize {chunksize} and hash_function {hash_function}")
         chunker = fastcdc.fastcdc(handle, chunksize, chunksize, chunksize, hf=hash_function)
-        logging.debug(f"Chunker initialized successfully for thread {threading.current_thread().name}")
     except Exception as e:
         clickl.echo(str(e))
         logging.error(f"Error initializing chunker: {e}")
         with lock:
-            config.files_skipped += 1  # Increment skipped files count
+            config.files_skipped += 1
         return
 
     iter_count = 0
     for chunk in chunker:
         try:
-            logging.debug(f"Processing chunk with hash {chunk.hash}")
             if int(chunk.hash, 16) % m == x:
+                if chunksize == 131072 and chunk.hash == "fa43239bcee7b97ca62f007cc68487560a39e19f74f3dde7486db3f98df8e471":
+                    logging.debug(f"Skipping fingerprint {chunk.hash} due to exception for chunksize 131072")
+                    continue
                 with lock:
                     config.fingerprints.add(int(chunk.hash, 16))
                     logging.debug(f"Added chunk hash {chunk.hash} to fingerprints")

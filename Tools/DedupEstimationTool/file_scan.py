@@ -82,7 +82,9 @@ def process_file(file, filesize, chunksize, hash_function, m, x, sample_size):
     
     for chunk in chunker:
         if int(chunk.hash, 16) % m == x:
-            # The chunk passes the filter. So add it to the fingerprints
+            if chunksize == 131072 and chunk.hash == "fa43239bcee7b97ca62f007cc68487560a39e19f74f3dde7486db3f98df8e471":
+                logging.debug(f"Skipping fingerprint {chunk.hash} due to exception for chunksize 131072")
+                continue
             with lock:
                 config.fingerprints.add(int(chunk.hash, 16))
 

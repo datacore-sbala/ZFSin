@@ -22,6 +22,14 @@ from fastcdc.utils import DefaultHelp, supported_hashes
 # Create a lock for thread-safe access to shared resources
 lock = threading.Lock()
 
+def calculate_zero_chunk_hash(chunksize, hash_function):
+    """
+    Calculate the hash of a chunk filled with zeroes of the given size.
+    """
+    zero_chunk = b'\x00' * chunksize  # Create a chunk of zeroes
+    hf = getattr(hashlib, hash_function)
+    return hf(zero_chunk).hexdigest()
+
 def iter_files(path, recursive=False):
     if recursive:
         for root, subdirs, files in os.walk(path):
@@ -91,6 +99,12 @@ def iter_files(path, recursive=False):
     default=False,
 )
 @click.option(
+    "--skip-zeroes",
+    help="Skip all zero chunks when scanning raw disks",
+    is_flag=True,
+    default=True,
+)
+@click.option(
     "--nosampling",
     help="Use this option to get more accurate results. But it uses more memory",
     is_flag=True,
@@ -108,7 +122,7 @@ def iter_files(path, recursive=False):
     default=False,
     show_default=True
 )
-def scan(paths, recursive, size, hash_function, outpath, max_threads, raw, nosampling, sample_size, isconfig):
+def scan(paths, recursive, size, hash_function, outpath, max_threads, raw, skip_zeroes, nosampling, sample_size, isconfig):
     """
     Scan and report duplication.
     """
@@ -144,6 +158,11 @@ def scan(paths, recursive, size, hash_function, outpath, max_threads, raw, nosam
             '''
             For reading raw physical/logical disks
             '''
+            if skip_zeroes:
+                zero_chunk_hash = calculate_zero_chunk_hash(size, hash_function)
+                logging.debug(f"Zero chunk hash: {zero_chunk_hash}")
+            else:
+                zero_chunk_hash = None
             click.echo("Scanning the disks...")
             sizes = []
             for path in paths:
